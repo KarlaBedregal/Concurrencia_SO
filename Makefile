@@ -39,16 +39,22 @@ test: bin/test_invariantes
 test-inseguro: bin/test_invariantes
 	-MODO=inseguro ./bin/test_invariantes
 
-# Detector de carreras de datos (ThreadSanitizer): 1 corrida con 2 threads de cada parte
+# Detector de carreras de datos (ThreadSanitizer): 1 corrida con 2 threads de cada parte.
+# Se ejecuta con 'setarch -R' (sin aleatorizacion de memoria) porque en kernels nuevos
+# ThreadSanitizer puede fallar al iniciar ("unexpected memory mapping").
 TSANFLAGS = -std=c++17 -O1 -g -fsanitize=thread -pthread
 tsan: | bin
 	$(CXX) $(TSANFLAGS) -o bin/parte_a_tsan src/parte_a.cpp $(COMUN)
 	$(CXX) $(TSANFLAGS) -o bin/parte_b_tsan src/parte_b.cpp $(COMUN)
+	@cd bin && setarch $$(uname -m) -R ./parte_a_tsan --reps 1 --hilos 2 > /dev/null 2> tsan_a.txt; true
+	@cd bin && setarch $$(uname -m) -R ./parte_b_tsan --reps 1 --hilos 2 > /dev/null 2> tsan_b.txt; true
 	@echo "=== Parte A (sin proteccion) con ThreadSanitizer ==="
-	@cd bin && ./parte_a_tsan --reps 1 --hilos 2 2>&1 >/dev/null | grep SUMMARY | sort | uniq -c; true
-	@cd bin && n=$$(./parte_a_tsan --reps 1 --hilos 2 2>&1 >/dev/null | grep -c "WARNING: ThreadSanitizer"); echo "Avisos de data race en la Parte A: $$n"
+	@grep -m1 "FATAL" bin/tsan_a.txt; true
+	@grep SUMMARY bin/tsan_a.txt | sort | uniq -c; true
+	@echo "Avisos de data race en la Parte A: $$(grep -c 'WARNING: ThreadSanitizer' bin/tsan_a.txt)"
 	@echo "=== Parte B (con mutex) con ThreadSanitizer ==="
-	@cd bin && n=$$(./parte_b_tsan --reps 1 --hilos 2 2>&1 >/dev/null | grep -c "WARNING: ThreadSanitizer"); echo "Avisos de data race en la Parte B: $$n"
+	@grep -m1 "FATAL" bin/tsan_b.txt; true
+	@echo "Avisos de data race en la Parte B: $$(grep -c 'WARNING: ThreadSanitizer' bin/tsan_b.txt)"
 
 clean:
 	rm -rf bin resultados
