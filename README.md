@@ -1,6 +1,6 @@
 # Concurrencia – Carrera y reparación controlada (C++)
 
-Sistemas Operativos · UNSA · 2026-B · Docente: MSc. Norman Patrick Harvey Arce
+Sistemas Operativos - Tarea Concurrencia
 Alumna: Bedregal Coaguila, Karla Miluska
 
 Varios threads (`std::thread`) transfieren unidades entre dos saldos compartidos
